@@ -50,7 +50,7 @@ class UD(system2D):
         self.nuFu_expr(expression='J_UD',variables=['u'])
         self.nuFu_expr(expression='J_U',variables=['u','w'])
         self.nuFu_expr(expression='J_D',variables=['u','w'])
-        self.nuFu_expr(expression='fpExpr',variables=['u','w'])
+        self.nuFu_expr(expression='fpExpr',variables=['u'])
         return 
     
     def phasePlane(self, ax, W = np.linspace(0,1,50), U = np.linspace(-60,30,250)/26.64, wNullLabel='', vNullLabel='',plotNullClines=1):
@@ -66,8 +66,8 @@ class UD(system2D):
         ax.streamplot(W, U*self.pars['v_T'], dW, dU*self.pars['v_T'], density=0.8, color = 'gray', linewidth=lw)
         if plotNullClines>0:
             w_wNull = self.w_inf_(U); w_vNull = self.w_vNull_(U)
-            ax.plot(w_vNull, U*self.pars['v_T'], '.', lw=2,   color = 'green', alpha=0.75, label=vNullLabel);
-            ax.plot(w_wNull, U*self.pars['v_T'], '.', lw=2, color = 'orange', alpha=0.75, label=wNullLabel)
+            ax.plot(w_vNull, U*self.pars['v_T'], '-', lw=2,   color = 'green', alpha=0.75, label=vNullLabel);
+            ax.plot(w_wNull, U*self.pars['v_T'], '-', lw=2, color = 'orange', alpha=0.75, label=wNullLabel)
         ax.set_xlim(W.min(),W.max())
         ax.set_ylim(U.min()*self.pars['v_T'],U.max()*self.pars['v_T'])
         #ax.legend(loc='lower right')
@@ -115,15 +115,22 @@ class UD(system2D):
             iAmps[n][a:b] = iLevels[n]
         return iAmps
 
-    def iClamp(self, ampMin=-10, ampMax=150, ampStep=25, timeStimStart=100, timeStimStop=20):
-        iStim = np.arange(ampMin,ampMax,ampStep)/self.pars['vTCm']
-        iAmps = self.iClampSquareStims(iLevels=iStim, timeStimStart=timeStimStart, timeStimStop=timeStimStop)
-        nCommands = len(iAmps)
+    def iClamp(self, iList):
+        nCommands = len(iList)
         vOrbits = list()  #; wOrbits = list(); 
+        stimValue = list()
         for n in range(nCommands):
-            vOrbit, wOrbit = self.trayectory_nonAutonomous(parNames=['a_F'], parVals=[iAmps[n]])
+            vOrbit, wOrbit = self.trayectory_nonAutonomous(parNames=['a_F'], parVals=[iList[n]])
             vOrbits.append(vOrbit); #wOrbits.append(wOrbit); 
-        return vOrbits, iStim #, wOrbits
+        return vOrbits #, wOrbits
+
+    def steadyStateFromIC(self, timeMax = 1000):
+        self.pars['timeMax'] = timeMax
+        self.updateFunctions() 
+        u,w = upDn.trayectory_Autonomous(upDn.duw_)
+        self.pars['ic'] = np.array([u[-1],w[-1]])
+        print('Found steady state near (%g,%g)'%(u[-1]*self.pars['v_T'],w[-1]))
+        return upDn.pars['ic']
 
     def getDynamics(self, parNames=[], parVals=[]):
         self.updateFunctions()
